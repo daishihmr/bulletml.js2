@@ -1,0 +1,86 @@
+<html>
+
+<body></body>
+<script src="../build/bulletml.js"></script>
+<script>
+	window.onload = async () => {
+		const res = await fetch("samples.json");
+		const json = await res.json();
+		const bulletml = await load("./sample/[Daiouzyou]_hibachi_maybe.xml");
+		console.log(bulletml);
+		main(bulletml);
+	};
+	
+	const load = async (url) => {
+		const res = await fetch(url);
+		return await res.text();
+	};
+
+	const main = (xml) => {
+		const scale = 4;
+		const canvas = document.createElement("canvas");
+		canvas.width = 300 * scale;
+		canvas.height = 300 * scale * 4 / 3;
+		canvas.style.width = "512px";
+		document.body.appendChild(canvas);
+		const context = canvas.getContext("2d");
+
+		const root = BulletML.parse(xml);
+		console.log(root);
+
+		const player = { x: canvas.width * 0.5 / scale, y: canvas.height * 0.8 / scale };
+		const enemy = new BulletML.Bullet();
+		enemy.x = canvas.width * 0.5 / scale;
+		enemy.y = canvas.height * 0.3 / scale;
+		const bullets = [];
+
+		const manager = new BulletML.Manager({ player });
+		manager.rank = 0.0;
+		manager.onFire = (params) => {
+			const { bullet, runner, spec } = params;
+			bullets.push(bullet);
+			bullet.onVanish = () => {
+				const idx = bullets.indexOf(bullet);
+				if (idx >= 0) bullets.splice(idx, 1);
+			};
+		};
+		manager.run(enemy, root);
+
+		const start = Date.now();
+		const loop = () => {
+			// player.x += 0.5;
+
+			manager.update();
+
+			bullets.forEach(bullet => {
+				if (bullet.x * scale < 0 || canvas.width <= bullet.x * scale || bullet.y * scale < 0 || canvas.height <= bullet.y * scale) {
+					bullet.destroy();
+					const idx = bullets.indexOf(bullet);
+					bullets.splice(idx, 1);
+				}
+			});
+
+			context.fillStyle = "#000";
+			context.fillRect(0, 0, canvas.width, canvas.height);
+
+			context.save();
+			context.translate(player.x * scale, player.y * scale);
+			context.fillStyle = "#ffa";
+			context.fillRect(-4, -4, 8, 8);
+			context.restore();
+
+			bullets.forEach(bullet => {
+				context.save();
+				context.translate(bullet.x * scale, bullet.y * scale);
+				context.fillStyle = "#aff";
+				context.fillRect(-4, -4, 8, 8);
+				context.restore();
+			});
+
+			setTimeout(loop, 1000 / 60);
+		};
+		loop();
+	};
+</script>
+
+</html>

@@ -1,0 +1,55 @@
+<html>
+<script>
+  const tree = {
+    value: "0",
+    children: [{
+      value: "1",
+      children: [
+        { ref: "sub" },
+        { value: "12", children: [{ value: "121", children: [] }] },
+        { value: "13", children: [{ value: "131", children: [] }, { value: "132", children: [] }] },
+      ]
+    }, {
+      value: "2",
+      children: [
+        { value: "21", children: [{ value: "211", children: [] }, { value: "212", children: [] }, { value: "213", children: [] }] },
+        { value: "22", children: [{ value: "221", children: [] }] },
+        { value: "23", children: [] },
+      ]
+    }]
+  };
+  const subTree = {
+    value: "sub1",
+    children: [
+      { value: "sub11", children: [{ value: "sub111", children: [] }, { value: "sub112", children: [] }, { value: "sub113", children: [] }] },
+      { value: "sub12", children: [{ value: "sub121", children: [] }] },
+      { value: "sub13", children: [] },
+    ],
+  };
+
+  const gen = function* (node) {
+    if (node.ref) {
+      yield* gen(subTree);
+    } else {
+      yield node;
+      for (let i = 0; i < node.children.length; i++) {
+        yield* gen(node.children[i])
+      }
+    }
+  };
+
+  // const ite = gen(tree);
+  // for (let n = ite.next(); !n.done; n = ite.next()) {
+  //   console.log(n.value);
+  // }
+
+  const g = gen(tree);
+  let ite;
+  document.onclick = () => {
+    ite = g.next();
+    console.log(g);
+    console.log(ite.value);
+  };
+</script>
+
+</html>
