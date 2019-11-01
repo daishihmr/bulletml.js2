@@ -1,5 +1,11 @@
 class Bullet {
 
+  static get() {
+    const bullet = new Bullet();
+    bullet.init();
+    return bullet;
+  }
+
   constructor() {
     this.init();
   }
@@ -17,7 +23,7 @@ class Bullet {
     this.runner.manager.remove(this.runner);
   }
 
-  onVanish() {}
+  onVanish() { }
 
 }
 

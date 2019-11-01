@@ -29,8 +29,8 @@
 	    this.name = "accel";
 
 	    this.parent = null;
-	    this.horizontal = new Horizontal();
-	    this.vertical = new Vertical();
+	    this.horizontal = null;
+	    this.vertical = null;
 	    this.term = null;
 	  }
 	}
@@ -613,6 +613,12 @@
 
 	class Bullet$1 {
 
+	  static get() {
+	    const bullet = new Bullet$1();
+	    bullet.init();
+	    return bullet;
+	  }
+
 	  constructor() {
 	    this.init();
 	  }
@@ -630,7 +636,7 @@
 	    this.runner.manager.remove(this.runner);
 	  }
 
-	  onVanish() {}
+	  onVanish() { }
 
 	}
 
@@ -639,10 +645,15 @@
 
 	class Runner extends EventDispatcher {
 
-	  constructor(bullet, root, manager, action, scope) {
+	  static get(bullet, root, manager, action, scope) {
+	    const runner = new Runner();
+	    runner.init(bullet, root, manager, action, scope);
+	    return runner;
+	  }
+
+	  constructor() {
 	    super();
 	    this.running = false;
-	    this.init(bullet, root, manager, action, scope);
 	  }
 
 	  init(bullet, root, manager, actions, scope) {
@@ -659,7 +670,7 @@
 	      newBullet.speed = params.initialSpeed;
 	      newBullet.parent = this.bullet;
 
-	      const newRunner = new Runner(newBullet, root, manager, params.actions, params.scope);
+	      const newRunner = Runner.get(newBullet, root, manager, params.actions, params.scope);
 	      newRunner.on("newbullet", onNewBullet);
 
 	      newBullet.runner = newRunner;
@@ -671,7 +682,7 @@
 	    if (actions == null) actions = this.root.actions.filter(_ => _.label != null && _.label.startsWith("top"));
 
 	    this.topRunners = actions.map(action => {
-	      const runner = new SubRunner(bullet, action, root, manager, scope);
+	      const runner = SubRunner.get(bullet, action, root, manager, scope);
 	      runner.on("newbullet", onNewBullet);
 	      runner.on("vanish", () => this.fire("vanish"));
 	      return runner;
@@ -691,7 +702,13 @@
 
 	class SubRunner extends EventDispatcher {
 
-	  constructor(bullet, action, root, manager, scope) {
+	  static get(bullet, action, root, manager, scope) {
+	    const subRunner = new SubRunner();
+	    subRunner.init(bullet, action, root, manager, scope);
+	    return subRunner;
+	  }
+
+	  constructor() {
 	    super();
 	    this.running = false;
 	    this.chDir = {
@@ -710,15 +727,26 @@
 	      delta: 0,
 	      duration: 0,
 	      time: 0,
+	      type: null,
 	    };
+
 	    this.acl = {
 	      enabled: false,
-	      accelV: 0,
-	      accelH: 0,
 	      duration: 0,
 	      time: 0,
 	    };
-	    this.init(bullet, action, root, manager, scope);
+	    this.aclH = {
+	      from: 0,
+	      to: 0,
+	      delta: 0,
+	      type: null,
+	    };
+	    this.aclV = {
+	      from: 0,
+	      to: 0,
+	      delta: 0,
+	      type: null,
+	    };
 	  }
 
 	  init(bullet, action, root, manager, scope) {
@@ -753,12 +781,21 @@
 	    this.chSpd.delta = 0;
 	    this.chSpd.duration = 0;
 	    this.chSpd.time = 0;
+	    this.chSpd.type = null;
 
 	    this.acl.enabled = false;
-	    this.acl.accelV = 0;
-	    this.acl.accelH = 0;
 	    this.acl.duration = 0;
 	    this.acl.time = 0;
+
+	    this.aclH.from = 0;
+	    this.aclH.to = 0;
+	    this.aclH.delta = 0;
+	    this.aclH.type = null;
+
+	    this.aclV.from = 0;
+	    this.aclV.to = 0;
+	    this.aclV.delta = 0;
+	    this.aclV.type = null;
 
 	    const gen = function* (node) {
 	      if (node.name == "actionRef") {
@@ -822,42 +859,69 @@
 	    }
 
 	    if (this.chDir.enabled) {
+	      this.chDir.time += deltaFrame;
+	      if (this.chDir.time >= this.chDir.duration) this.chDir.enabled = false;
+
 	      if (this.chDir.type != "sequence") {
-	        this.chDir.time += deltaFrame;
 	        if (this.chDir.time < this.chDir.duration) {
 	          this.bullet.direction = this.chDir.from + this.chDir.delta * (this.chDir.time / this.chDir.duration);
 	        } else {
 	          this.bullet.direction = this.chDir.to;
-	          this.chDir.enabled = false;
 	        }
 	      } else {
 	        this.bullet.direction += this.chDir.delta * deltaFrame;
-	        if (this.chDir.time >= this.chDir.duration) {
-	          this.chDir.enabled = false;
-	        }
 	      }
 	    }
 
 	    if (this.chSpd.enabled) {
 	      this.chSpd.time += deltaFrame;
-	      if (this.chSpd.time < this.chSpd.duration) {
-	        this.bullet.speed = this.chSpd.from + this.chSpd.delta * (this.chSpd.time / this.chSpd.duration);
+	      if (this.chSpd.time >= this.chSpd.duration) this.chSpd.enabled = false;
+
+	      if (this.chSpd.type != "sequence") {
+	        if (this.chSpd.time < this.chSpd.duration) {
+	          this.bullet.speed = this.chSpd.from + this.chSpd.delta * (this.chSpd.time / this.chSpd.duration);
+	        } else {
+	          this.bullet.speed = this.chSpd.to;
+	        }
 	      } else {
-	        this.bullet.speed = this.chSpd.to;
-	        this.chSpd.enabled = false;
-	      }
-	    }
-	    if (this.acl.enabled) {
-	      this.acl.time += deltaFrame;
-	      if (this.acl.time <= this.acl.duration) {
-	        this.speed += Math.sqrt(Math.pow(this.acl.accelH * deltaFrame, 2) + Math.pow(this.acl.accelV * deltaFrame, 2));
-	      } else {
-	        this.acl.enabled = false;
+	        this.bullet.speed += this.chSpd.delta * deltaFrame;
 	      }
 	    }
 
-	    this.bullet.x += Math.cos(this.bullet.direction * DEG_TO_RAD) * this.bullet.speed * deltaFrame;
-	    this.bullet.y += Math.sin(this.bullet.direction * DEG_TO_RAD) * this.bullet.speed * deltaFrame;
+
+	    if (this.acl.enabled) {
+	      let velocityH = Math.cos((-90 + this.bullet.direction) * DEG_TO_RAD) * this.bullet.speed;
+	      let velocityV = Math.sin((-90 + this.bullet.direction) * DEG_TO_RAD) * this.bullet.speed;
+
+	      this.acl.time += deltaFrame;
+	      if (this.acl.time >= this.acl.duration) this.acl.enabled = false;
+
+	      if (this.aclH.type != "sequence") {
+	        if (this.acl.time < this.acl.duration) {
+	          velocityH = this.aclH.from + this.aclH.delta * (this.acl.time / this.acl.duration);
+	        } else {
+	          velocityH = this.aclH.to;
+	        }
+	      } else {
+	        velocityH += this.aclH.delta * deltaFrame;
+	      }
+
+	      if (this.aclV.type != "sequence") {
+	        if (this.acl.time < this.acl.duration) {
+	          velocityV = this.aclV.from + this.aclV.delta * (this.acl.time / this.acl.duration);
+	        } else {
+	          velocityV = this.aclV.to;
+	        }
+	      } else {
+	        velocityV += this.aclV.delta * deltaFrame;
+	      }
+
+	      this.bullet.direction = 90 + Math.atan2(velocityV, velocityH) * RAD_TO_DEG;
+	      this.bullet.speed = Math.sqrt(Math.pow(velocityH, 2) + Math.pow(velocityV, 2));
+	    }
+
+	    this.bullet.x += Math.cos((-90 + this.bullet.direction) * DEG_TO_RAD) * this.bullet.speed * deltaFrame;
+	    this.bullet.y += Math.sin((-90 + this.bullet.direction) * DEG_TO_RAD) * this.bullet.speed * deltaFrame;
 	  }
 
 	  execTask(node) {
@@ -895,7 +959,6 @@
 	    } else if (node.bulletRef) {
 	      bullet = this.findBullet(node.bulletRef.label);
 	      scope = this.calcParams(node.bulletRef.params);
-	      this.scopeStack.push(scope);
 	    }
 
 	    let actions;
@@ -914,20 +977,26 @@
 	    let dir = 0;
 	    const direction = bullet.direction || node.direction;
 	    if (direction != null) {
+	      if (node.bulletRef && bullet.direction) this.scopeStack.push(scope);
+
 	      if (direction.type == "aim") {
-	        dir = Math.atan2(this.manager.getPlayerY() - this.bullet.y, this.manager.getPlayerX() - this.bullet.x) * RAD_TO_DEG + this.calcExp(direction);
+	        dir = 90 + Math.atan2(this.manager.getPlayerY() - this.bullet.y, this.manager.getPlayerX() - this.bullet.x) * RAD_TO_DEG + this.calcExp(direction);
 	      } else if (direction.type == "absolute") {
-	        dir = -90 + this.calcExp(direction);
+	        dir = this.calcExp(direction);
 	      } else if (direction.type == "relative") {
 	        dir = this.bullet.direction + this.calcExp(direction);
 	      } else if (direction.type == "sequence") {
 	        dir = this.lastDirection + this.calcExp(direction);
 	      }
+
+	      if (node.bulletRef && bullet.direction) this.scopeStack.pop();
 	    }
 
 	    let spd = 1;
 	    const speed = bullet.speed || node.speed;
 	    if (speed != null) {
+	      if (node.bulletRef && bullet.speed) this.scopeStack.push(scope);
+
 	      if (speed.type == "absolute") {
 	        spd = this.calcExp(speed);
 	      } else if (speed.type == "relative") {
@@ -935,6 +1004,8 @@
 	      } else if (speed.type == "sequence") {
 	        spd = this.lastSpeed + this.calcExp(speed);
 	      }
+
+	      if (node.bulletRef && bullet.speed) this.scopeStack.pop();
 	    }
 
 	    this.fire("newbullet", {
@@ -951,10 +1022,6 @@
 
 	    this.lastDirection = dir;
 	    this.lastSpeed = spd;
-
-	    if (node.bulletRef) {
-	      this.scopeStack.pop();
-	    }
 	  }
 
 	  execFireRef(node) {
@@ -971,7 +1038,7 @@
 	    if (node.direction.type == "aim") {
 	      this.chDir.to = Math.atan2(this.manager.getPlayerY() - this.bullet.y, this.manager.getPlayerX() - this.bullet.x) * RAD_TO_DEG + this.calcExp(node.direction);
 	    } else if (node.direction.type == "absolute") {
-	      this.chDir.to = -90 + this.calcExp(node.direction);
+	      this.chDir.to = this.calcExp(node.direction);
 	    } else if (node.direction.type == "relative") {
 	      this.chDir.to = this.chDir.from + this.calcExp(node.direction);
 	    } else if (node.direction.type == "sequence") {
@@ -994,39 +1061,65 @@
 	  }
 
 	  execChangeSpeed(node) {
+	    this.chSpd.type = node.speed.type;
+
 	    this.chSpd.from = this.bullet.speed;
 	    if (node.speed.type == "absolute") {
 	      this.chSpd.to = this.calcExp(node.speed);
 	    } else if (node.speed.type == "relative") {
 	      this.chSpd.to = this.chSpd.from + this.calcExp(node.speed);
 	    } else if (node.speed.type == "sequence") {
-	      this.chSpd.to = this.lastSpeed + this.calcExp(node.speed);
+	      this.chSpd.delta = this.calcExp(node.speed);
 	    }
-	    this.chSpd.delta = this.chSpd.to - this.chSpd.from;
+
+	    if (node.speed.type != "sequence") {
+	      this.chSpd.delta = this.chSpd.to - this.chSpd.from;
+	    }
+
 	    this.chSpd.time = 0;
 	    this.chSpd.duration = this.calcExp(node.term);
 	    this.chSpd.enabled = true;
 	  }
 
 	  execAccel(node) {
-	    if (node.horizontal.type == "absolute") {
-	      this.acl.accelH = this.calcExp(node.horizontal);
-	    } else if (node.horizontal.type == "relative") {
-	      // TODO
-	      this.acl.accelH = this.calcExp(node.horizontal);
-	    } else if (node.horizontal.type == "sequence") {
-	      // TODO
-	      this.acl.accelH = this.calcExp(node.horizontal);
+	    this.aclH.from = Math.cos((-90 + this.bullet.direction) * DEG_TO_RAD) * this.bullet.speed;
+	    if (node.horizontal) {
+	      this.aclH.type = node.horizontal.type;
+	      if (node.horizontal.type == "absolute") {
+	        this.aclH.to = this.calcExp(node.horizontal);
+	      } else if (node.horizontal.type == "relative") {
+	        this.aclH.to = this.aclH.from + this.calcExp(node.horizontal);
+	      } else if (node.horizontal.type == "sequence") {
+	        this.aclH.delta = this.calcExp(node.horizontal);
+	      }
+
+	      if (node.horizontal.type != "sequence") {
+	        this.aclH.delta = this.aclH.to - this.aclH.from;
+	      }
+	    } else {
+	      this.aclH.type = null;
+	      this.aclH.to = this.aclH.from;
+	      this.aclH.delta = 0;
 	    }
 
-	    if (node.vertical.type == "absolute") {
-	      this.acl.accelV = this.calcExp(node.vertical);
-	    } else if (node.vertical.type == "relative") {
-	      // TODO
-	      this.acl.accelV = this.calcExp(node.vertical);
-	    } else if (node.vertical.type == "sequence") {
-	      // TODO
-	      this.acl.accelV = this.calcExp(node.vertical);
+	    this.aclV.from = Math.sin((-90 + this.bullet.direction) * DEG_TO_RAD) * this.bullet.speed;
+	    if (node.vertical) {
+	      this.aclV.type = node.vertical.type;
+	      if (node.vertical.type == "absolute") {
+	        this.aclV.to = this.calcExp(node.vertical);
+	      } else if (node.vertical.type == "relative") {
+	        this.aclV.to = this.aclV.from + this.calcExp(node.vertical);
+	      } else if (node.vertical.type == "sequence") {
+	        this.aclV.delta = this.calcExp(node.vertical);
+	      }
+
+	      if (node.vertical.type != "sequence") {
+	        this.aclV.delta = this.aclV.to - this.aclV.from;
+	      }
+	    } else {
+	      this.aclV.type = null;
+	      this.aclV.to = this.aclV.from;
+	      this.aclV.delta = 0;
 	    }
 
 	    this.acl.time = 0;
@@ -1114,7 +1207,7 @@
 	  }
 
 	  run(bullet, root) {
-	    const runner = new Runner(bullet, root, this);
+	    const runner = Runner.get(bullet, root, this);
 	    this.fire("newrunner", runner);
 	    return runner;
 	  }

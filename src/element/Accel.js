@@ -6,8 +6,8 @@ class Accel {
     this.name = "accel";
 
     this.parent = null;
-    this.horizontal = new Horizontal();
-    this.vertical = new Vertical();
+    this.horizontal = null;
+    this.vertical = null;
     this.term = null;
   }
 }

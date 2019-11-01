@@ -3,14 +3,28 @@
 <body></body>
 <script src="../build/bulletml.js"></script>
 <script>
+	const key = {
+		ArrowRight: false,
+		ArrowLeft: false,
+		ArrowUp: false,
+		ArrowDown: false,
+	};
+	window.onkeydown = (e) => {
+		key[e.key] = true;
+	};
+	window.onkeyup = (e) => {
+		key[e.key] = false;
+	};
+
 	window.onload = async () => {
 		const res = await fetch("samples.json");
 		const json = await res.json();
-		const bulletml = await load("./sample/[Daiouzyou]_hibachi_maybe.xml");
+		const bulletml = await load("sample/[Bulletsmorph]_double_seduction.xml");
+		console.log(json[19]);
 		console.log(bulletml);
 		main(bulletml);
 	};
-	
+
 	const load = async (url) => {
 		const res = await fetch(url);
 		return await res.text();
@@ -18,9 +32,10 @@
 
 	const main = (xml) => {
 		const scale = 4;
+		const radius = 10;
 		const canvas = document.createElement("canvas");
-		canvas.width = 300 * scale;
-		canvas.height = 300 * scale * 4 / 3;
+		canvas.width = 400 * scale;
+		canvas.height = 400 * scale * 4 / 3;
 		canvas.style.width = "512px";
 		document.body.appendChild(canvas);
 		const context = canvas.getContext("2d");
@@ -35,7 +50,7 @@
 		const bullets = [];
 
 		const manager = new BulletML.Manager({ player });
-		manager.rank = 0.0;
+		manager.rank = 1.0;
 		manager.onFire = (params) => {
 			const { bullet, runner, spec } = params;
 			bullets.push(bullet);
@@ -48,15 +63,13 @@
 
 		const start = Date.now();
 		const loop = () => {
-			// player.x += 0.5;
-
 			manager.update();
 
 			bullets.forEach(bullet => {
 				if (bullet.x * scale < 0 || canvas.width <= bullet.x * scale || bullet.y * scale < 0 || canvas.height <= bullet.y * scale) {
 					bullet.destroy();
 					const idx = bullets.indexOf(bullet);
-					bullets.splice(idx, 1);
+					if (idx >= 0) bullets.splice(idx, 1);
 				}
 			});
 
@@ -65,17 +78,36 @@
 
 			context.save();
 			context.translate(player.x * scale, player.y * scale);
-			context.fillStyle = "#ffa";
-			context.fillRect(-4, -4, 8, 8);
+			const gra = context.createRadialGradient(0, 0, 0, 0, 0, radius);
+			gra.addColorStop(0.0, "#faf");
+			gra.addColorStop(0.9, "#faf");
+			gra.addColorStop(1.0, "transparent");
+			context.fillStyle = gra;
+			context.fillRect(-radius, -radius, radius * 2, radius * 2);
 			context.restore();
 
 			bullets.forEach(bullet => {
 				context.save();
 				context.translate(bullet.x * scale, bullet.y * scale);
-				context.fillStyle = "#aff";
-				context.fillRect(-4, -4, 8, 8);
+				const gra = context.createRadialGradient(0, 0, 0, 0, 0, radius);
+				gra.addColorStop(0.0, "#aff");
+				gra.addColorStop(0.9, "#aff");
+				gra.addColorStop(1.0, "transparent");
+				context.fillStyle = gra;
+				context.fillRect(-radius, -radius, radius * 2, radius * 2);
 				context.restore();
 			});
+
+			if (key.ArrowLeft) {
+				player.x -= 1;
+			} else if (key.ArrowRight) {
+				player.x += 1;
+			}
+			if (key.ArrowUp) {
+				player.y -= 1;
+			} else if (key.ArrowDown) {
+				player.y += 1;
+			}
 
 			setTimeout(loop, 1000 / 60);
 		};

@@ -50,7 +50,7 @@ class Manager extends EventDispatcher {
   }
 
   run(bullet, root) {
-    const runner = new Runner(bullet, root, this);
+    const runner = Runner.get(bullet, root, this);
     this.fire("newrunner", runner);
     return runner;
   }
