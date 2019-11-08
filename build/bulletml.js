@@ -1036,7 +1036,7 @@
 
 	    this.chDir.from = this.bullet.direction;
 	    if (node.direction.type == "aim") {
-	      this.chDir.to = Math.atan2(this.manager.getPlayerY() - this.bullet.y, this.manager.getPlayerX() - this.bullet.x) * RAD_TO_DEG + this.calcExp(node.direction);
+	      this.chDir.to = 90 + Math.atan2(this.manager.getPlayerY() - this.bullet.y, this.manager.getPlayerX() - this.bullet.x) * RAD_TO_DEG + this.calcExp(node.direction);
 	    } else if (node.direction.type == "absolute") {
 	      this.chDir.to = this.calcExp(node.direction);
 	    } else if (node.direction.type == "relative") {

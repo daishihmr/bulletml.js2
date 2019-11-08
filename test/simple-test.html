@@ -19,9 +19,11 @@
 	window.onload = async () => {
 		const res = await fetch("samples.json");
 		const json = await res.json();
-		const bulletml = await load("sample/[Bulletsmorph]_double_seduction.xml");
-		console.log(json[19]);
-		console.log(bulletml);
+		const xmlName = json[Math.floor(Math.random() * json.length)];
+		// const xmlName = "sample/[Daiouzyou]_round_4_boss_4.xml";
+		console.log(xmlName);
+		const bulletml = await load(xmlName);
+		// console.log(bulletml);
 		main(bulletml);
 	};
 
@@ -47,6 +49,7 @@
 		const enemy = new BulletML.Bullet();
 		enemy.x = canvas.width * 0.5 / scale;
 		enemy.y = canvas.height * 0.3 / scale;
+
 		const bullets = [];
 
 		const manager = new BulletML.Manager({ player });
@@ -61,7 +64,6 @@
 		};
 		manager.run(enemy, root);
 
-		const start = Date.now();
 		const loop = () => {
 			manager.update();
 
