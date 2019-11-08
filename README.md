@@ -2,7 +2,7 @@
 
 ## usage
 
-~~~
+~~~html
 <!-- import library -->
 <script src="../build/bulletml.js"></script>
 
