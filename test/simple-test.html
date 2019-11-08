@@ -3,6 +3,22 @@
 <body></body>
 <script src="../build/bulletml.js"></script>
 <script>
+	window.onload = async () => {
+		const res = await fetch("samples.json");
+		const json = await res.json();
+		const xmlName = json[Math.floor(Math.random() * json.length)];
+		// const xmlName = "sample/[Daiouzyou]_round_4_boss_4.xml";
+		console.log(xmlName);
+		const xml = await load(xmlName);
+		// console.log(xml);
+		main(xml);
+	};
+
+	const load = async (url) => {
+		const res = await fetch(url);
+		return await res.text();
+	};
+
 	const key = {
 		ArrowRight: false,
 		ArrowLeft: false,
@@ -16,36 +32,21 @@
 		key[e.key] = false;
 	};
 
-	window.onload = async () => {
-		const res = await fetch("samples.json");
-		const json = await res.json();
-		const xmlName = json[Math.floor(Math.random() * json.length)];
-		// const xmlName = "sample/[Daiouzyou]_round_4_boss_4.xml";
-		console.log(xmlName);
-		const bulletml = await load(xmlName);
-		// console.log(bulletml);
-		main(bulletml);
-	};
-
-	const load = async (url) => {
-		const res = await fetch(url);
-		return await res.text();
-	};
-
 	const main = (xml) => {
 		const scale = 4;
 		const radius = 10;
 		const canvas = document.createElement("canvas");
 		canvas.width = 400 * scale;
-		canvas.height = 400 * scale * 4 / 3;
+		canvas.height = 400 * scale;
 		canvas.style.width = "512px";
 		document.body.appendChild(canvas);
 		const context = canvas.getContext("2d");
 
 		const root = BulletML.parse(xml);
-		console.log(root);
+		// console.log(root);
 
 		const player = { x: canvas.width * 0.5 / scale, y: canvas.height * 0.8 / scale };
+
 		const enemy = new BulletML.Bullet();
 		enemy.x = canvas.width * 0.5 / scale;
 		enemy.y = canvas.height * 0.3 / scale;
@@ -101,14 +102,14 @@
 			});
 
 			if (key.ArrowLeft) {
-				player.x -= 1;
+				player.x -= 0.5 * scale;
 			} else if (key.ArrowRight) {
-				player.x += 1;
+				player.x += 0.5 * scale;
 			}
 			if (key.ArrowUp) {
-				player.y -= 1;
+				player.y -= 0.5 * scale;
 			} else if (key.ArrowDown) {
-				player.y += 1;
+				player.y += 0.5 * scale;
 			}
 
 			setTimeout(loop, 1000 / 60);

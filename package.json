@@ -1,13 +1,13 @@
 {
-  "name": "bulletml.js2",
-  "version": "1.0.0",
-  "description": "",
+  "name": "bulletml.js",
+  "version": "2.0.0",
+  "description": "JavaScript BulletML library.",
   "main": "index.js",
   "directories": {
     "test": "test"
   },
   "scripts": {
-    "build": "rollup -c"
+    "build": "rollup --config"
   },
   "author": "daishi.hmr",
   "license": "MIT",
