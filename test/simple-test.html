@@ -2,12 +2,13 @@
 
 <body></body>
 <script src="../build/bulletml.js"></script>
+<script src="./stats.min.js"></script>
 <script>
 	window.onload = async () => {
 		const res = await fetch("samples.json");
 		const json = await res.json();
 		const xmlName = json[Math.floor(Math.random() * json.length)];
-		// const xmlName = "sample/[Daiouzyou]_round_4_boss_4.xml";
+		// const xmlName = "sample/[Original]_sakuretudan.xml";
 		console.log(xmlName);
 		const xml = await load(xmlName);
 		// console.log(xml);
@@ -39,6 +40,7 @@
 		canvas.width = 400 * scale;
 		canvas.height = 400 * scale;
 		canvas.style.width = "512px";
+		canvas.style.marginLeft = "100px";
 		document.body.appendChild(canvas);
 		const context = canvas.getContext("2d");
 
@@ -65,7 +67,13 @@
 		};
 		manager.run(enemy, root);
 
+		const stats = new Stats();
+		stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
+		document.body.appendChild(stats.dom);
+
 		const loop = () => {
+			stats.begin();
+
 			manager.update();
 
 			bullets.forEach(bullet => {
@@ -111,6 +119,14 @@
 			} else if (key.ArrowDown) {
 				player.y += 0.5 * scale;
 			}
+
+			context.fillStyle = "white";
+			context.font = "40px monospace";
+			context.fillText("Runner.pool.count = " + BulletML.Runner.pool.getCount(), 10, 50 * 1);
+			context.fillText("Bullet.pool.count = " + BulletML.Bullet.pool.getCount(), 10, 50 * 2);
+			context.fillText("manager.runners.length = " + manager.runners.length, 10, 50 * 3);
+
+			stats.end();
 
 			requestAnimationFrame(loop);
 		};

@@ -1,23 +1,43 @@
-import { Runner, SubRunner } from "./Runner";
-import { Bullet } from "./Bullet";
-
 class Pool {
 
-  constructor(runnerCount = 50, subRunnerCount = 500, bulletCount = 500) {
-    this.runnerPool = [];
-    for (let i = 0; i < runnerCount; i++) {
-      this.runnerPool.push(new Runner());
-    }
+  constructor(clazz, count = 500, incr = 100) {
+    this.Clazz = pooledMixin(clazz);
+    this.incr = incr;
 
-    this.subRunnerPool = [];
-    for (let i = 0; i < subRunnerCount; i++) {
-      this.runnerPool.push(new SubRunner());
+    this.pool = [];
+    for (let i = 0; i < count; i++) {
+      this.pool.push(new this.Clazz());
     }
+  }
 
-    this.bulletPool = [];
-    for (let i = 0; i < bulletCount; i++) {
-      this.runnerPool.push(new Bullet());
+  get() {
+    const ret = this.pool.find(_ => !_._isActive);
+    if (ret) {
+      ret._isActive = true;
+    } else {
+      for (let i = 0; i < this.incr; i++) {
+        this.pool.push(new this.Clazz());
+      }
+      return this.get();
     }
+    return ret;
+  }
+
+  getCount() {
+    return this.pool.filter(_ => !_._isActive).length;
+  }
+
+}
+
+const pooledMixin = Base => class extends Base {
+
+  constructor() {
+    super();
+    this.dispose();
+  }
+
+  dispose() {
+    this._isActive = false;
   }
 
 }

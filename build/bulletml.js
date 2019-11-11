@@ -593,14 +593,6 @@
 	    this._listeners[eventType].push(listener);
 	  }
 
-	  off(eventType, listener) {
-	    if (this._listeners[eventType] == null) {
-	      return;
-	    }
-	    const idx = this._listeners[eventType].indexOf(listener);
-	    if (idx >= 0) this._listeners[eventType].splice(idx, 1);
-	  }
-
 	  fire(eventType, params) {
 	    if (this._listeners[eventType] == null) {
 	      return;
@@ -609,15 +601,15 @@
 	    this._listeners[eventType].forEach(listener => listener(params));
 	  }
 
+	  clearAllListeners() {
+	    for (let eventType in this._listeners) {
+	      this._listeners[eventType].splice(0);
+	    }
+	  }
+
 	}
 
 	class Bullet$1 {
-
-	  static get() {
-	    const bullet = new Bullet$1();
-	    bullet.init();
-	    return bullet;
-	  }
 
 	  constructor() {
 	    this.init();
@@ -640,16 +632,18 @@
 
 	}
 
+	Bullet$1.get = () => {
+	  const bullet = Bullet$1.pool.get();
+	  if (bullet) {
+	    bullet.init();
+	    return bullet;
+	  }
+	};
+
 	const DEG_TO_RAD = Math.PI / 180;
 	const RAD_TO_DEG = 180 / Math.PI;
 
 	class Runner extends EventDispatcher {
-
-	  static get(bullet, root, manager, action, scope) {
-	    const runner = new Runner();
-	    runner.init(bullet, root, manager, action, scope);
-	    return runner;
-	  }
 
 	  constructor() {
 	    super();
@@ -663,13 +657,14 @@
 	    this.manager = manager;
 
 	    const onNewBullet = (params) => {
-	      const newBullet = new Bullet$1();
+	      const newBullet = Bullet$1.get();
+	      
 	      newBullet.x = params.initialX;
 	      newBullet.y = params.initialY;
 	      newBullet.direction = params.initialDirection;
 	      newBullet.speed = params.initialSpeed;
 	      newBullet.parent = this.bullet;
-
+	      
 	      const newRunner = Runner.get(newBullet, root, manager, params.actions, params.scope);
 	      newRunner.on("newbullet", onNewBullet);
 
@@ -694,6 +689,17 @@
 	    this.topRunners.forEach(_ => _.update(deltaTimeMs));
 	  }
 
+	  destroy() {
+	    this.dispose();
+	    this.clearAllListeners();
+	    this.topRunners.forEach(subRunner => {
+	      subRunner.dispose();
+	      subRunner.clearAllListeners();
+	    });
+	    this.topRunners.splice(0);
+	    this.bullet.dispose();
+	  }
+
 	  isDone() {
 	    return !this.topRunners.some(_ => _.isDone());
 	  }
@@ -701,12 +707,6 @@
 	}
 
 	class SubRunner extends EventDispatcher {
-
-	  static get(bullet, action, root, manager, scope) {
-	    const subRunner = new SubRunner();
-	    subRunner.init(bullet, action, root, manager, scope);
-	    return subRunner;
-	  }
 
 	  constructor() {
 	    super();
@@ -1158,6 +1158,66 @@
 
 	}
 
+	Runner.get = (bullet, root, manager, action, scope) => {
+	  const runner = Runner.pool.get();
+	  if (runner) {
+	    runner.init(bullet, root, manager, action, scope);
+	    return runner;
+	  }
+	};
+
+	SubRunner.get = (bullet, action, root, manager, scope) => {
+	  const subRunner = SubRunner.pool.get();
+	  if (subRunner) {
+	    subRunner.init(bullet, action, root, manager, scope);
+	    return subRunner;
+	  }
+	};
+
+	class Pool {
+
+	  constructor(clazz, count = 500, incr = 100) {
+	    this.Clazz = pooledMixin(clazz);
+	    this.incr = incr;
+
+	    this.pool = [];
+	    for (let i = 0; i < count; i++) {
+	      this.pool.push(new this.Clazz());
+	    }
+	  }
+
+	  get() {
+	    const ret = this.pool.find(_ => !_._isActive);
+	    if (ret) {
+	      ret._isActive = true;
+	    } else {
+	      for (let i = 0; i < this.incr; i++) {
+	        this.pool.push(new this.Clazz());
+	      }
+	      return this.get();
+	    }
+	    return ret;
+	  }
+
+	  getCount() {
+	    return this.pool.filter(_ => !_._isActive).length;
+	  }
+
+	}
+
+	const pooledMixin = Base => class extends Base {
+
+	  constructor() {
+	    super();
+	    this.dispose();
+	  }
+
+	  dispose() {
+	    this._isActive = false;
+	  }
+
+	};
+
 	class Manager extends EventDispatcher {
 
 	  constructor(params) {
@@ -1178,16 +1238,25 @@
 	      });
 	      this.runners.push(runner);
 	    });
+
+	    if (Runner.pool == null) Runner.pool = new Pool(Runner, params.runnerPoolCount || 500, params.runnerPoolIncr || 100);
+	    if (SubRunner.pool == null) SubRunner.pool = new Pool(SubRunner, params.subRunnerPoolCount || 1500, params.subRunnerPoolIncr || 100);
+	    if (Bullet$1.pool == null) Bullet$1.pool = new Pool(Bullet$1, params.bulletPoolCount || 500, params.bulletPoolIncr || 100);
 	  }
 
 	  update(deltaTimeMs = 1000 / 60) {
 	    this.runners.forEach(_ => _.update(deltaTimeMs));
 
-	    this.toRemove.forEach(r => {
+	    for (let i = 0; i < this.toRemove.length; i++) {
+	      const r = this.toRemove[i];
 	      const idx = this.runners.indexOf(r);
-	      if (idx >= 0) this.runners.splice(idx, 1);
-	    });
-	    this.toRemove.length = 0;
+	      if (idx >= 0) {
+	        this.runners.splice(idx, 1);
+	      }
+	      r.destroy();
+	    }
+
+	    this.toRemove.splice(0);
 	  }
 
 	  getPlayerX() {

@@ -4,7 +4,7 @@
 
 ~~~html
 <!-- import library -->
-<script src="../build/bulletml.js"></script>
+<script src="./build/bulletml.js"></script>
 
 <script>
 window.onload = async () => {

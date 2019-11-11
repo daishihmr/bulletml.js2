@@ -8,12 +8,6 @@ const RAD_TO_DEG = 180 / Math.PI;
 
 class Runner extends EventDispatcher {
 
-  static get(bullet, root, manager, action, scope) {
-    const runner = new Runner();
-    runner.init(bullet, root, manager, action, scope);
-    return runner;
-  }
-
   constructor() {
     super();
     this.running = false;
@@ -26,13 +20,14 @@ class Runner extends EventDispatcher {
     this.manager = manager;
 
     const onNewBullet = (params) => {
-      const newBullet = new Bullet();
+      const newBullet = Bullet.get();
+      
       newBullet.x = params.initialX;
       newBullet.y = params.initialY;
       newBullet.direction = params.initialDirection;
       newBullet.speed = params.initialSpeed;
       newBullet.parent = this.bullet;
-
+      
       const newRunner = Runner.get(newBullet, root, manager, params.actions, params.scope);
       newRunner.on("newbullet", onNewBullet);
 
@@ -57,6 +52,17 @@ class Runner extends EventDispatcher {
     this.topRunners.forEach(_ => _.update(deltaTimeMs));
   }
 
+  destroy() {
+    this.dispose();
+    this.clearAllListeners();
+    this.topRunners.forEach(subRunner => {
+      subRunner.dispose();
+      subRunner.clearAllListeners();
+    });
+    this.topRunners.splice(0);
+    this.bullet.dispose();
+  }
+
   isDone() {
     return !this.topRunners.some(_ => _.isDone());
   }
@@ -64,12 +70,6 @@ class Runner extends EventDispatcher {
 }
 
 class SubRunner extends EventDispatcher {
-
-  static get(bullet, action, root, manager, scope) {
-    const subRunner = new SubRunner();
-    subRunner.init(bullet, action, root, manager, scope);
-    return subRunner;
-  }
 
   constructor() {
     super();
@@ -520,5 +520,21 @@ class SubRunner extends EventDispatcher {
   }
 
 }
+
+Runner.get = (bullet, root, manager, action, scope) => {
+  const runner = Runner.pool.get();
+  if (runner) {
+    runner.init(bullet, root, manager, action, scope);
+    return runner;
+  }
+};
+
+SubRunner.get = (bullet, action, root, manager, scope) => {
+  const subRunner = SubRunner.pool.get();
+  if (subRunner) {
+    subRunner.init(bullet, action, root, manager, scope);
+    return subRunner;
+  }
+};
 
 export { Runner, SubRunner };

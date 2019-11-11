@@ -1,11 +1,5 @@
 class Bullet {
 
-  static get() {
-    const bullet = new Bullet();
-    bullet.init();
-    return bullet;
-  }
-
   constructor() {
     this.init();
   }
@@ -26,5 +20,13 @@ class Bullet {
   onVanish() { }
 
 }
+
+Bullet.get = () => {
+  const bullet = Bullet.pool.get();
+  if (bullet) {
+    bullet.init();
+    return bullet;
+  }
+};
 
 export { Bullet };
