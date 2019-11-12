@@ -4,11 +4,13 @@
 <script src="../build/bulletml.js"></script>
 <script src="./stats.min.js"></script>
 <script>
+	const disp = true;
+
 	window.onload = async () => {
 		const res = await fetch("samples.json");
 		const json = await res.json();
 		const xmlName = json[Math.floor(Math.random() * json.length)];
-		// const xmlName = "sample/[Original]_sakuretudan.xml";
+		// const xmlName = "./sample/[Original]_tsunami.xml";
 		console.log(xmlName);
 		const xml = await load(xmlName);
 		// console.log(xml);
@@ -84,43 +86,39 @@
 				}
 			});
 
-			context.fillStyle = "#000";
+			context.fillStyle = "white";
 			context.fillRect(0, 0, canvas.width, canvas.height);
 
-			context.save();
-			context.translate(player.x * scale, player.y * scale);
-			const gra = context.createRadialGradient(0, 0, 0, 0, 0, radius);
-			gra.addColorStop(0.0, "#faf");
-			gra.addColorStop(0.9, "#faf");
-			gra.addColorStop(1.0, "transparent");
-			context.fillStyle = gra;
-			context.fillRect(-radius, -radius, radius * 2, radius * 2);
-			context.restore();
+			if (disp) {
 
-			bullets.forEach(bullet => {
 				context.save();
-				context.translate(bullet.x * scale, bullet.y * scale);
-				const gra = context.createRadialGradient(0, 0, 0, 0, 0, radius);
-				gra.addColorStop(0.0, "#aff");
-				gra.addColorStop(0.9, "#aff");
-				gra.addColorStop(1.0, "transparent");
-				context.fillStyle = gra;
+				context.translate(player.x * scale, player.y * scale);
+				context.fillStyle = "black";
 				context.fillRect(-radius, -radius, radius * 2, radius * 2);
 				context.restore();
-			});
 
-			if (key.ArrowLeft) {
-				player.x -= 0.5 * scale;
-			} else if (key.ArrowRight) {
-				player.x += 0.5 * scale;
-			}
-			if (key.ArrowUp) {
-				player.y -= 0.5 * scale;
-			} else if (key.ArrowDown) {
-				player.y += 0.5 * scale;
+				context.fillStyle = "red";
+				bullets.forEach(bullet => {
+					context.save();
+					context.translate(bullet.x * scale, bullet.y * scale);
+					context.fillRect(-radius, -radius, radius * 2, radius * 2);
+					context.restore();
+				});
+
+				if (key.ArrowLeft) {
+					player.x -= 0.5 * scale;
+				} else if (key.ArrowRight) {
+					player.x += 0.5 * scale;
+				}
+				if (key.ArrowUp) {
+					player.y -= 0.5 * scale;
+				} else if (key.ArrowDown) {
+					player.y += 0.5 * scale;
+				}
+
 			}
 
-			context.fillStyle = "white";
+			context.fillStyle = "black";
 			context.font = "40px monospace";
 			context.fillText("Runner.pool.count = " + BulletML.Runner.pool.getCount(), 10, 50 * 1);
 			context.fillText("Bullet.pool.count = " + BulletML.Bullet.pool.getCount(), 10, 50 * 2);
