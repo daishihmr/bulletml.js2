@@ -1,4 +1,4 @@
-import { Runner, SubRunner } from "./Runner";
+import { Runner, SubRunner, SimpleRunner } from "./Runner";
 import { EventDispatcher } from "./EventDispatcher";
 import { Bullet } from "./Bullet";
 import { Pool } from "./Pool";
@@ -26,6 +26,7 @@ class Manager extends EventDispatcher {
 
     if (Runner.pool == null) Runner.pool = new Pool(Runner, params.runnerPoolCount || 500, params.runnerPoolIncr || 100);
     if (SubRunner.pool == null) SubRunner.pool = new Pool(SubRunner, params.subRunnerPoolCount || 1500, params.subRunnerPoolIncr || 100);
+    if (SimpleRunner.pool == null) SimpleRunner.pool = new Pool(SimpleRunner, params.simpleRunnerPoolCount || 500, params.simpleRunnerPoolIncr || 100);
     if (Bullet.pool == null) Bullet.pool = new Pool(Bullet, params.bulletPoolCount || 500, params.bulletPoolIncr || 100);
   }
 

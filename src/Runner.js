@@ -21,14 +21,16 @@ class Runner extends EventDispatcher {
 
     const onNewBullet = (params) => {
       const newBullet = Bullet.get();
-      
+
       newBullet.x = params.initialX;
       newBullet.y = params.initialY;
       newBullet.direction = params.initialDirection;
       newBullet.speed = params.initialSpeed;
       newBullet.parent = this.bullet;
-      
-      const newRunner = Runner.get(newBullet, root, manager, params.actions, params.scope);
+
+      const newRunner = params.actions.length > 0
+        ? Runner.get(newBullet, root, manager, params.actions, params.scope)
+        : SimpleRunner.get(newBullet, manager);
       newRunner.on("newbullet", onNewBullet);
 
       newBullet.runner = newRunner;
@@ -63,8 +65,8 @@ class Runner extends EventDispatcher {
     this.bullet.dispose();
   }
 
-  isDone() {
-    return !this.topRunners.some(_ => _.isDone());
+  isCompleted() {
+    return !this.topRunners.some(_ => _.isCompleted());
   }
 
 }
@@ -204,7 +206,7 @@ class SubRunner extends EventDispatcher {
     return this.root.fires.find(_ => _.label == label);
   }
 
-  isDone() {
+  isCompleted() {
     return this.iterator.done;
   }
 
@@ -324,18 +326,13 @@ class SubRunner extends EventDispatcher {
       scope = this.calcParams(node.bulletRef.params);
     }
 
-    let actions;
-    if (bullet.actions.length > 0) {
-      actions = bullet.actions.map(a => {
-        if (a.name == "action") {
-          return a;
-        } else if (a.name == "actionRef") {
-          return this.findAction(a.label);
-        }
-      });
-    } else {
-      actions = [EmptyAction];
-    }
+    const actions = bullet.actions.map(a => {
+      if (a.name == "action") {
+        return a;
+      } else if (a.name == "actionRef") {
+        return this.findAction(a.label);
+      }
+    });
 
     let dir = 0;
     const direction = bullet.direction || node.direction;
@@ -521,6 +518,38 @@ class SubRunner extends EventDispatcher {
 
 }
 
+class SimpleRunner extends EventDispatcher {
+
+  constructor() {
+    super();
+  }
+
+  init(bullet, manager) {
+    this.bullet = bullet;
+    this.manager = manager;
+
+    this.dx = Math.cos((-90 + this.bullet.direction) * DEG_TO_RAD) * this.bullet.speed;
+    this.dy = Math.sin((-90 + this.bullet.direction) * DEG_TO_RAD) * this.bullet.speed;
+  }
+
+  update(deltaTimeMs) {
+    const deltaFrame = deltaTimeMs / (1000 / 60);
+    this.bullet.x += this.dx * deltaFrame;
+    this.bullet.y += this.dy * deltaFrame;
+  }
+
+  destroy() {
+    this.dispose();
+    this.clearAllListeners();
+    this.bullet.dispose();
+  }
+
+  isCompleted() {
+    return true;
+  }
+
+}
+
 Runner.get = (bullet, root, manager, action, scope) => {
   const runner = Runner.pool.get();
   if (runner) {
@@ -537,4 +566,12 @@ SubRunner.get = (bullet, action, root, manager, scope) => {
   }
 };
 
-export { Runner, SubRunner };
+SimpleRunner.get = (bullet, manager) => {
+  const runner = SimpleRunner.pool.get();
+  if (runner) {
+    runner.init(bullet, manager);
+    return runner;
+  }
+};
+
+export { Runner, SubRunner, SimpleRunner };
