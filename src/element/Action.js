@@ -13,6 +13,4 @@ class Action {
   }
 }
 
-const EmptyAction = new Action();
-
-export { Action, EmptyAction };
+export { Action };

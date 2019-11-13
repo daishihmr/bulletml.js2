@@ -1,7 +1,6 @@
 import { expToFunc } from "./Expressions";
 import { EventDispatcher } from "./EventDispatcher";
 import { Bullet } from "./Bullet";
-import { EmptyAction } from "./element/Action";
 
 const DEG_TO_RAD = Math.PI / 180;
 const RAD_TO_DEG = 180 / Math.PI;
@@ -55,14 +54,15 @@ class Runner extends EventDispatcher {
   }
 
   destroy() {
-    this.dispose();
+    this.running = false;
+    this._dispose();
     this.clearAllListeners();
     this.topRunners.forEach(subRunner => {
-      subRunner.dispose();
+      subRunner._dispose();
       subRunner.clearAllListeners();
     });
     this.topRunners.splice(0);
-    this.bullet.dispose();
+    this.bullet._dispose();
   }
 
   isCompleted() {
@@ -539,9 +539,9 @@ class SimpleRunner extends EventDispatcher {
   }
 
   destroy() {
-    this.dispose();
+    this._dispose();
     this.clearAllListeners();
-    this.bullet.dispose();
+    this.bullet._dispose();
   }
 
   isCompleted() {

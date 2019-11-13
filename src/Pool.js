@@ -33,10 +33,10 @@ const pooledMixin = Base => class extends Base {
 
   constructor() {
     super();
-    this.dispose();
+    this._dispose();
   }
 
-  dispose() {
+  _dispose() {
     this._isActive = false;
   }
 

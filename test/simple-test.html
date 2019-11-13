@@ -1,10 +1,11 @@
 <html>
 
-<body></body>
+<body style="background: black;"></body>
 <script src="../build/bulletml.js"></script>
 <script src="./stats.min.js"></script>
 <script>
-	const disp = true;
+	const DISP = true;
+	const SCALE = 4;
 
 	window.onload = async () => {
 		const res = await fetch("samples.json");
@@ -22,6 +23,95 @@
 		return await res.text();
 	};
 
+	const main = (xml) => {
+		const player = { x: 200, y: 350 };
+
+		const enemy = new BulletML.Bullet();
+		enemy.x = 200;
+		enemy.y = 80;
+
+		const bullets = [];
+		bullets.remove = (bullet) => {
+			const idx = bullets.indexOf(bullet);
+			if (idx >= 0) bullets.splice(idx, 1);
+		};
+
+		const manager = new BulletML.Manager({ player });
+		manager.rank = 1.0;
+		manager.onFire = (params) => {
+			const { bullet, runner, spec } = params;
+			bullets.push(bullet);
+			bullet.onVanish = () => {
+				bullets.remove(bullet);
+			};
+		};
+
+		const root = BulletML.parse(xml);
+		// console.log(root);
+		manager.run(enemy, root);
+
+		const canvas = document.createElement("canvas");
+		canvas.width = 400 * SCALE;
+		canvas.height = 400 * SCALE;
+		canvas.style.width = "512px";
+		canvas.style.marginLeft = "100px";
+		canvas.style.border = "solid 1px white"
+		document.body.appendChild(canvas);
+
+		const context = canvas.getContext("2d");
+		context.font = "40px monospace";
+
+		const stats = new Stats();
+		document.body.appendChild(stats.dom);
+
+		const loop = () => {
+			stats.begin();
+
+			if (key.ArrowLeft) {
+				player.x -= 2;
+			} else if (key.ArrowRight) {
+				player.x += 2;
+			}
+			if (key.ArrowUp) {
+				player.y -= 2;
+			} else if (key.ArrowDown) {
+				player.y += 2;
+			}
+
+			manager.update();
+
+			const clone = bullets.slice(0);
+			clone.forEach(bullet => {
+				if (bullet.x * SCALE < 0 || canvas.width <= bullet.x * SCALE || bullet.y * SCALE < 0 || canvas.height <= bullet.y * SCALE) {
+					bullet.destroy();
+					bullets.remove(bullet);
+				}
+			});
+
+			if (DISP) {
+				context.clearRect(0, 0, canvas.width, canvas.height);
+
+				draw(context, player, "#fff");
+
+				bullets.forEach(bullet => {
+					draw(context, bullet, "#faa");
+				});
+
+				context.fillStyle = "#fff";
+				context.fillText("Bullet.pool.count = " + BulletML.Bullet.pool.getCount(), 10, 50 * 1);
+				context.fillText("manager.runners.length = " + manager.runners.length, 10, 50 * 2);
+				// context.fillText("Runner.pool.count = " + BulletML.Runner.pool.getCount(), 10, 50 * 3);
+				// context.fillText("SimpleRunner.pool.count = " + BulletML.SimpleRunner.pool.getCount(), 10, 50 * 4);
+				// context.fillText("SubRunner.pool.count = " + BulletML.SubRunner.pool.getCount(), 10, 50 * 5);
+			}
+
+			stats.end();
+
+			requestAnimationFrame(loop);
+		};
+		loop();
+	};
+
 	const key = {
 		ArrowRight: false,
 		ArrowLeft: false,
@@ -35,102 +125,12 @@
 		key[e.key] = false;
 	};
 
-	const main = (xml) => {
-		const scale = 4;
-		const radius = 10;
-		const canvas = document.createElement("canvas");
-		canvas.width = 400 * scale;
-		canvas.height = 400 * scale;
-		canvas.style.width = "512px";
-		canvas.style.marginLeft = "100px";
-		document.body.appendChild(canvas);
-		const context = canvas.getContext("2d");
-
-		const root = BulletML.parse(xml);
-		// console.log(root);
-
-		const player = { x: canvas.width * 0.5 / scale, y: canvas.height * 0.8 / scale };
-
-		const enemy = new BulletML.Bullet();
-		enemy.x = canvas.width * 0.5 / scale;
-		enemy.y = canvas.height * 0.3 / scale;
-
-		const bullets = [];
-
-		const manager = new BulletML.Manager({ player });
-		manager.rank = 1.0;
-		manager.onFire = (params) => {
-			const { bullet, runner, spec } = params;
-			bullets.push(bullet);
-			bullet.onVanish = () => {
-				const idx = bullets.indexOf(bullet);
-				if (idx >= 0) bullets.splice(idx, 1);
-			};
-		};
-		manager.run(enemy, root);
-
-		const stats = new Stats();
-		stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
-		document.body.appendChild(stats.dom);
-
-		const loop = () => {
-			stats.begin();
-
-			manager.update();
-
-			bullets.forEach(bullet => {
-				if (bullet.x * scale < 0 || canvas.width <= bullet.x * scale || bullet.y * scale < 0 || canvas.height <= bullet.y * scale) {
-					bullet.destroy();
-					const idx = bullets.indexOf(bullet);
-					if (idx >= 0) bullets.splice(idx, 1);
-				}
-			});
-
-			context.fillStyle = "white";
-			context.fillRect(0, 0, canvas.width, canvas.height);
-
-			if (disp) {
-
-				context.save();
-				context.translate(player.x * scale, player.y * scale);
-				context.fillStyle = "black";
-				context.fillRect(-radius, -radius, radius * 2, radius * 2);
-				context.restore();
-
-				context.fillStyle = "red";
-				bullets.forEach(bullet => {
-					context.save();
-					context.translate(bullet.x * scale, bullet.y * scale);
-					context.fillRect(-radius, -radius, radius * 2, radius * 2);
-					context.restore();
-				});
-
-				if (key.ArrowLeft) {
-					player.x -= 0.5 * scale;
-				} else if (key.ArrowRight) {
-					player.x += 0.5 * scale;
-				}
-				if (key.ArrowUp) {
-					player.y -= 0.5 * scale;
-				} else if (key.ArrowDown) {
-					player.y += 0.5 * scale;
-				}
-
-			}
-
-			context.fillStyle = "black";
-			context.font = "40px monospace";
-			context.fillText("Bullet.pool.count = " + BulletML.Bullet.pool.getCount(), 10, 50 * 1);
-			context.fillText("manager.runners.length = " + manager.runners.length, 10, 50 * 2);
-			// context.fillText("Runner.pool.count = " + BulletML.Runner.pool.getCount(), 10, 50 * 3);
-			// context.fillText("SimpleRunner.pool.count = " + BulletML.SimpleRunner.pool.getCount(), 10, 50 * 4);
-			// context.fillText("SubRunner.pool.count = " + BulletML.SubRunner.pool.getCount(), 10, 50 * 5);
-
-			stats.end();
-
-			requestAnimationFrame(loop);
-		};
-		loop();
+	const draw = (context, obj, color) => {
+		context.save();
+		context.translate(obj.x * SCALE, obj.y * SCALE);
+		context.fillStyle = color;
+		context.fillRect(-3 * SCALE, -3 * SCALE, 3 * SCALE * 2, 3 * SCALE * 2);
+		context.restore();
 	};
 </script>
 

@@ -690,14 +690,15 @@
 	  }
 
 	  destroy() {
-	    this.dispose();
+	    this.running = false;
+	    this._dispose();
 	    this.clearAllListeners();
 	    this.topRunners.forEach(subRunner => {
-	      subRunner.dispose();
+	      subRunner._dispose();
 	      subRunner.clearAllListeners();
 	    });
 	    this.topRunners.splice(0);
-	    this.bullet.dispose();
+	    this.bullet._dispose();
 	  }
 
 	  isCompleted() {
@@ -1174,9 +1175,9 @@
 	  }
 
 	  destroy() {
-	    this.dispose();
+	    this._dispose();
 	    this.clearAllListeners();
-	    this.bullet.dispose();
+	    this.bullet._dispose();
 	  }
 
 	  isCompleted() {
@@ -1244,10 +1245,10 @@
 
 	  constructor() {
 	    super();
-	    this.dispose();
+	    this._dispose();
 	  }
 
-	  dispose() {
+	  _dispose() {
 	    this._isActive = false;
 	  }
 

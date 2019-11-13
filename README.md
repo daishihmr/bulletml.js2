@@ -28,10 +28,19 @@ window.onload = async () => {
   // run
   manager.run(enemy, bulletml);
 
+  const bullets = [];
+
   // on fire bullet
   manager.onFire = (params) => {
     const { bullet } = params;
     console.log(`${ bullet.x }, ${ bullet.y }`);
+
+    // on execute <vanish> tag
+    bullet.onVanish = () => {
+      doVanishProcess();
+    };
+
+    bullets.push(bullet);
   };
 
   let last = Date.now();
@@ -44,6 +53,15 @@ window.onload = async () => {
 
     // update 1 frame
     manager.update(deltaTime);
+
+    bullets.forEach((bullet) => {
+
+      if (isOutOfScreen(bullet)) {
+        // delete bullet
+        bullet.destroy();
+      }
+
+    });
   };
   loop();
 
