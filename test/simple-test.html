@@ -11,7 +11,7 @@
 		const res = await fetch("samples.json");
 		const json = await res.json();
 		const xmlName = json[Math.floor(Math.random() * json.length)];
-		// const xmlName = "./sample/[Original]_tsunami.xml";
+		// const xmlName = "./sample/[OtakuTwo]_accel_jump.xml";
 		console.log(xmlName);
 		const xml = await load(xmlName);
 		// console.log(xml);
@@ -98,11 +98,12 @@
 				});
 
 				context.fillStyle = "#fff";
-				context.fillText("Bullet.pool.count = " + BulletML.Bullet.pool.getCount(), 10, 50 * 1);
-				context.fillText("manager.runners.length = " + manager.runners.length, 10, 50 * 2);
-				// context.fillText("Runner.pool.count = " + BulletML.Runner.pool.getCount(), 10, 50 * 3);
-				// context.fillText("SimpleRunner.pool.count = " + BulletML.SimpleRunner.pool.getCount(), 10, 50 * 4);
-				// context.fillText("SubRunner.pool.count = " + BulletML.SubRunner.pool.getCount(), 10, 50 * 5);
+				context.fillText("bullets.length = " + bullets.length, 10, 50 * 1);
+				context.fillText("Bullet.pool.count = " + BulletML.Bullet.pool.getCount(), 10, 50 * 2);
+				context.fillText("manager.runners.length = " + manager.runners.length, 10, 50 * 3);
+				// context.fillText("Runner.pool.count = " + BulletML.Runner.pool.getCount(), 10, 50 * 4);
+				// context.fillText("SimpleRunner.pool.count = " + BulletML.SimpleRunner.pool.getCount(), 10, 50 * 5);
+				// context.fillText("SubRunner.pool.count = " + BulletML.SubRunner.pool.getCount(), 10, 50 * 6);
 			}
 
 			stats.end();

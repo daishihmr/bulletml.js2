@@ -17,5 +17,6 @@
     "gulp-sourcemaps": "^2.6.5",
     "gulp-watch": "^5.0.1",
     "rollup": "^1.23.1"
-  }
+  },
+  "dependencies": {}
 }

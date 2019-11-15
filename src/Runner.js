@@ -18,34 +18,35 @@ class Runner extends EventDispatcher {
     this.root = root;
     this.manager = manager;
 
-    const onNewBullet = (params) => {
-      const newBullet = Bullet.get();
-
-      newBullet.x = params.initialX;
-      newBullet.y = params.initialY;
-      newBullet.direction = params.initialDirection;
-      newBullet.speed = params.initialSpeed;
-      newBullet.parent = this.bullet;
-
-      const newRunner = params.actions.length > 0
-        ? Runner.get(newBullet, root, manager, params.actions, params.scope)
-        : SimpleRunner.get(newBullet, manager);
-      newRunner.on("newbullet", onNewBullet);
-
-      newBullet.runner = newRunner;
-
-      manager.fire("newrunner", newRunner);
-      manager.onFire({ bullet: newBullet, runner: newRunner, spec: params.spec });
-    };
-
     if (actions == null) actions = this.root.actions.filter(_ => _.label != null && _.label.startsWith("top"));
 
     this.topRunners = actions.map(action => {
       const runner = SubRunner.get(bullet, action, root, manager, scope);
-      runner.on("newbullet", onNewBullet);
+      runner.on("newbullet", params => this.onNewBullet(params));
       runner.on("vanish", () => this.fire("vanish"));
       return runner;
     });
+  }
+
+  onNewBullet(params) {
+    const newBullet = Bullet.get();
+
+    newBullet.x = params.initialX;
+    newBullet.y = params.initialY;
+    newBullet.direction = params.initialDirection;
+    newBullet.speed = params.initialSpeed;
+    newBullet.parent = this.bullet;
+
+    const newRunner = params.actions.length > 0
+      ? Runner.get(newBullet, this.root, this.manager, params.actions, params.scope)
+      : SimpleRunner.get(newBullet, this.manager);
+
+    newRunner.on("newbullet", p => this.onNewBullet(p));
+
+    newBullet.runner = newRunner;
+
+    this.manager.fire("newrunner", newRunner);
+    this.manager.onFire({ bullet: newBullet, runner: newRunner, spec: params.spec });
   }
 
   update(deltaTimeMs) {
@@ -112,6 +113,34 @@ class SubRunner extends EventDispatcher {
       delta: 0,
       type: null,
     };
+
+    this.gen = function* (node) {
+      if (node.name == "actionRef") {
+        const scope = this.calcParams(node.params);
+        this.scopeStack.push(scope);
+        yield* this.gen(this.findAction(node.label));
+        this.scopeStack.pop();
+      } else {
+        yield node;
+        if (node.name == "action") {
+          for (let i = 0; i < node.children.length; i++) {
+            yield* this.gen(node.children[i]);
+          }
+        } else if (node.name == "repeat") {
+          const times = this.calcExp(node.times);
+          for (let i = 0; i < times; i++) {
+            if (node.action) {
+              yield* this.gen(node.action);
+            } else if (node.actionRef) {
+              const scope = this.calcParams(node.actionRef.params);
+              this.scopeStack.push(scope);
+              yield* this.gen(this.findAction(node.actionRef.label));
+              this.scopeStack.pop();
+            }
+          }
+        }
+      }
+    }.bind(this);
   }
 
   init(bullet, action, root, manager, scope) {
@@ -162,35 +191,7 @@ class SubRunner extends EventDispatcher {
     this.aclV.delta = 0;
     this.aclV.type = null;
 
-    const gen = function* (node) {
-      if (node.name == "actionRef") {
-        const scope = this.calcParams(node.params);
-        this.scopeStack.push(scope);
-        yield* gen(this.findAction(node.label));
-        this.scopeStack.pop();
-      } else {
-        yield node;
-        if (node.name == "action") {
-          for (let i = 0; i < node.children.length; i++) {
-            yield* gen(node.children[i]);
-          }
-        } else if (node.name == "repeat") {
-          const times = this.calcExp(node.times);
-          for (let i = 0; i < times; i++) {
-            if (node.action) {
-              yield* gen(node.action);
-            } else if (node.actionRef) {
-              const scope = this.calcParams(node.actionRef.params);
-              this.scopeStack.push(scope);
-              yield* gen(this.findAction(node.actionRef.label));
-              this.scopeStack.pop();
-            }
-          }
-        }
-      }
-    }.bind(this);
-
-    this.generator = gen(action);
+    this.generator = this.gen(action);
     this.iterator = this.generator.next();
   }
 
