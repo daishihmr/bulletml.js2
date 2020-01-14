@@ -2,6 +2,7 @@ import { expToFunc } from "./Expressions";
 import { EventDispatcher } from "./EventDispatcher";
 import { Bullet } from "./Bullet";
 
+const MS = 1000 / 60;
 const DEG_TO_RAD = Math.PI / 180;
 const RAD_TO_DEG = 180 / Math.PI;
 
@@ -17,11 +18,12 @@ class Runner extends EventDispatcher {
     this.bullet = bullet;
     this.root = root;
     this.manager = manager;
+    this.scope = scope;
 
     if (actions == null) actions = this.root.actions.filter(_ => _.label != null && _.label.startsWith("top"));
 
     this.topRunners = actions.map(action => {
-      const runner = SubRunner.get(bullet, action, root, manager, scope);
+      const runner = SubRunner.get(this.bullet, action, this.root, this.manager, this.scope);
       runner.on("newbullet", params => this.onNewBullet(params));
       runner.on("vanish", () => this.fire("vanish"));
       return runner;
@@ -51,17 +53,25 @@ class Runner extends EventDispatcher {
 
   update(deltaTimeMs) {
     if (!this.running) return;
-    this.topRunners.forEach(_ => _.update(deltaTimeMs));
+
+    const runners = this.topRunners;
+    for (let i = 0, len = runners.length; i < len; i++) {
+      runners[i].update(deltaTimeMs);
+    }
   }
 
   destroy() {
     this.running = false;
     this._dispose();
     this.clearAllListeners();
-    this.topRunners.forEach(subRunner => {
-      subRunner._dispose();
-      subRunner.clearAllListeners();
-    });
+
+    const runners = this.topRunners;
+    for (let i = 0, len = runners.length; i < len; i++) {
+      const runner = runners[i];
+      runner._dispose();
+      runner.clearAllListeners();
+    }
+
     this.topRunners.splice(0);
     this.bullet._dispose();
   }
@@ -115,27 +125,27 @@ class SubRunner extends EventDispatcher {
     };
 
     this.gen = function* (node) {
-      if (node.name == "actionRef") {
+      if (node.name === "actionRef") {
         const scope = this.calcParams(node.params);
-        this.scopeStack.push(scope);
+        this.pushStack(scope);
         yield* this.gen(this.findAction(node.label));
-        this.scopeStack.pop();
+        this.popStack();
       } else {
         yield node;
-        if (node.name == "action") {
-          for (let i = 0; i < node.children.length; i++) {
+        if (node.name === "action") {
+          for (let i = 0, len = node.children.length; i < len; i++) {
             yield* this.gen(node.children[i]);
           }
-        } else if (node.name == "repeat") {
+        } else if (node.name === "repeat") {
           const times = this.calcExp(node.times);
           for (let i = 0; i < times; i++) {
             if (node.action) {
               yield* this.gen(node.action);
             } else if (node.actionRef) {
               const scope = this.calcParams(node.actionRef.params);
-              this.scopeStack.push(scope);
+              this.pushStack(scope);
               yield* this.gen(this.findAction(node.actionRef.label));
-              this.scopeStack.pop();
+              this.popStack();
             }
           }
         }
@@ -154,7 +164,7 @@ class SubRunner extends EventDispatcher {
     this.waitFor = 0;
 
     this.scopeStack = [];
-    if (scope != null) this.scopeStack.push(scope);
+    if (scope != null) this.pushStack(scope);
 
     this.lastSpeed = 0;
     this.lastDirection = 0;
@@ -196,15 +206,15 @@ class SubRunner extends EventDispatcher {
   }
 
   findAction(label) {
-    return this.root.actions.find(_ => _.label == label);
+    return this.root.actions.find(_ => _.label === label);
   }
 
   findBullet(label) {
-    return this.root.bullets.find(_ => _.label == label);
+    return this.root.bullets.find(_ => _.label === label);
   }
 
   findFire(label) {
-    return this.root.fires.find(_ => _.label == label);
+    return this.root.fires.find(_ => _.label === label);
   }
 
   isCompleted() {
@@ -214,7 +224,7 @@ class SubRunner extends EventDispatcher {
   update(deltaTimeMs) {
     if (!this.running) return;
 
-    const deltaFrame = deltaTimeMs / (1000 / 60);
+    const deltaFrame = deltaTimeMs / MS;
 
     this.waitCount += deltaFrame;
 
@@ -328,9 +338,9 @@ class SubRunner extends EventDispatcher {
     }
 
     const actions = bullet.actions.map(a => {
-      if (a.name == "action") {
+      if (a.name === "action") {
         return a;
-      } else if (a.name == "actionRef") {
+      } else if (a.name === "actionRef") {
         return this.findAction(a.label);
       }
     });
@@ -338,35 +348,35 @@ class SubRunner extends EventDispatcher {
     let dir = 0;
     const direction = bullet.direction || node.direction;
     if (direction != null) {
-      if (node.bulletRef && bullet.direction) this.scopeStack.push(scope);
+      if (node.bulletRef && bullet.direction) this.pushStack(scope);
 
-      if (direction.type == "aim") {
+      if (direction.type === "aim") {
         dir = 90 + Math.atan2(this.manager.getPlayerY() - this.bullet.y, this.manager.getPlayerX() - this.bullet.x) * RAD_TO_DEG + this.calcExp(direction);
-      } else if (direction.type == "absolute") {
+      } else if (direction.type === "absolute") {
         dir = this.calcExp(direction);
-      } else if (direction.type == "relative") {
+      } else if (direction.type === "relative") {
         dir = this.bullet.direction + this.calcExp(direction);
-      } else if (direction.type == "sequence") {
+      } else if (direction.type === "sequence") {
         dir = this.lastDirection + this.calcExp(direction);
       }
 
-      if (node.bulletRef && bullet.direction) this.scopeStack.pop();
+      if (node.bulletRef && bullet.direction) this.popStack();
     }
 
     let spd = 1;
     const speed = bullet.speed || node.speed;
     if (speed != null) {
-      if (node.bulletRef && bullet.speed) this.scopeStack.push(scope);
+      if (node.bulletRef && bullet.speed) this.pushStack(scope);
 
-      if (speed.type == "absolute") {
+      if (speed.type === "absolute") {
         spd = this.calcExp(speed);
-      } else if (speed.type == "relative") {
+      } else if (speed.type === "relative") {
         spd = this.bullet.speed + this.calcExp(speed);
-      } else if (speed.type == "sequence") {
+      } else if (speed.type === "sequence") {
         spd = this.lastSpeed + this.calcExp(speed);
       }
 
-      if (node.bulletRef && bullet.speed) this.scopeStack.pop();
+      if (node.bulletRef && bullet.speed) this.popStack();
     }
 
     this.fire("newbullet", {
@@ -387,22 +397,22 @@ class SubRunner extends EventDispatcher {
 
   execFireRef(node) {
     const scope = this.calcParams(node.params);
-    this.scopeStack.push(scope);
+    this.pushStack(scope);
     this.execFire(this.findFire(node.label));
-    this.scopeStack.pop();
+    this.popStack();
   }
 
   execChangeDirection(node) {
     this.chDir.type = node.direction.type;
 
     this.chDir.from = this.bullet.direction;
-    if (node.direction.type == "aim") {
+    if (node.direction.type === "aim") {
       this.chDir.to = 90 + Math.atan2(this.manager.getPlayerY() - this.bullet.y, this.manager.getPlayerX() - this.bullet.x) * RAD_TO_DEG + this.calcExp(node.direction);
-    } else if (node.direction.type == "absolute") {
+    } else if (node.direction.type === "absolute") {
       this.chDir.to = this.calcExp(node.direction);
-    } else if (node.direction.type == "relative") {
+    } else if (node.direction.type === "relative") {
       this.chDir.to = this.chDir.from + this.calcExp(node.direction);
-    } else if (node.direction.type == "sequence") {
+    } else if (node.direction.type === "sequence") {
       let delta = this.calcExp(node.direction);
       while (delta < -180) delta += 360;
       while (180 <= delta) delta -= 360;
@@ -425,11 +435,11 @@ class SubRunner extends EventDispatcher {
     this.chSpd.type = node.speed.type;
 
     this.chSpd.from = this.bullet.speed;
-    if (node.speed.type == "absolute") {
+    if (node.speed.type === "absolute") {
       this.chSpd.to = this.calcExp(node.speed);
-    } else if (node.speed.type == "relative") {
+    } else if (node.speed.type === "relative") {
       this.chSpd.to = this.chSpd.from + this.calcExp(node.speed);
-    } else if (node.speed.type == "sequence") {
+    } else if (node.speed.type === "sequence") {
       this.chSpd.delta = this.calcExp(node.speed);
     }
 
@@ -446,11 +456,11 @@ class SubRunner extends EventDispatcher {
     this.aclH.from = Math.cos((-90 + this.bullet.direction) * DEG_TO_RAD) * this.bullet.speed;
     if (node.horizontal) {
       this.aclH.type = node.horizontal.type;
-      if (node.horizontal.type == "absolute") {
+      if (node.horizontal.type === "absolute") {
         this.aclH.to = this.calcExp(node.horizontal);
-      } else if (node.horizontal.type == "relative") {
+      } else if (node.horizontal.type === "relative") {
         this.aclH.to = this.aclH.from + this.calcExp(node.horizontal);
-      } else if (node.horizontal.type == "sequence") {
+      } else if (node.horizontal.type === "sequence") {
         this.aclH.delta = this.calcExp(node.horizontal);
       }
 
@@ -466,11 +476,11 @@ class SubRunner extends EventDispatcher {
     this.aclV.from = Math.sin((-90 + this.bullet.direction) * DEG_TO_RAD) * this.bullet.speed;
     if (node.vertical) {
       this.aclV.type = node.vertical.type;
-      if (node.vertical.type == "absolute") {
+      if (node.vertical.type === "absolute") {
         this.aclV.to = this.calcExp(node.vertical);
-      } else if (node.vertical.type == "relative") {
+      } else if (node.vertical.type === "relative") {
         this.aclV.to = this.aclV.from + this.calcExp(node.vertical);
-      } else if (node.vertical.type == "sequence") {
+      } else if (node.vertical.type === "sequence") {
         this.aclV.delta = this.calcExp(node.vertical);
       }
 
@@ -500,7 +510,7 @@ class SubRunner extends EventDispatcher {
   }
 
   findAction(label) {
-    return this.root.actions.find(_ => _.label == label);
+    return this.root.actions.find(_ => _.label === label);
   }
 
   calcParams(params) {
@@ -515,6 +525,13 @@ class SubRunner extends EventDispatcher {
       this.manager.getRank(),
       ...scope
     );
+  }
+
+  pushStack(params) {
+    this.scopeStack.push(params);
+  }
+  popStack() {
+    this.scopeStack.pop();
   }
 
 }
@@ -534,7 +551,7 @@ class SimpleRunner extends EventDispatcher {
   }
 
   update(deltaTimeMs) {
-    const deltaFrame = deltaTimeMs / (1000 / 60);
+    const deltaFrame = deltaTimeMs / MS;
     this.bullet.x += this.dx * deltaFrame;
     this.bullet.y += this.dy * deltaFrame;
   }

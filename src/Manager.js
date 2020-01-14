@@ -3,6 +3,8 @@ import { EventDispatcher } from "./EventDispatcher";
 import { Bullet } from "./Bullet";
 import { Pool } from "./Pool";
 
+const MS = 1000 / 60;
+
 class Manager extends EventDispatcher {
 
   constructor(params) {
@@ -30,10 +32,10 @@ class Manager extends EventDispatcher {
     if (Bullet.pool == null) Bullet.pool = new Pool(Bullet, params.bulletPoolCount || 500, params.bulletPoolIncr || 100);
   }
 
-  update(deltaTimeMs = 1000 / 60) {
+  update(deltaTimeMs = MS) {
     this.runners.forEach(_ => _.update(deltaTimeMs));
 
-    for (let i = 0; i < this.toRemove.length; i++) {
+    for (let i = 0, len = this.toRemove.length; i < len; i++) {
       const r = this.toRemove[i];
       const idx = this.runners.indexOf(r);
       if (idx >= 0) {

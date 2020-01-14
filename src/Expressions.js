@@ -23,11 +23,13 @@ const check = (str) => {
   assert(str.indexOf("=") < 0);
   assert(str.indexOf("{") < 0);
   assert(str.indexOf("}") < 0);
-  assert(str.indexOf(":") < 0);
   assert(str.indexOf("window") < 0);
   assert(str.indexOf("location") < 0);
   assert(str.indexOf("navigator") < 0);
   assert(str.indexOf("document") < 0);
+  assert(str.indexOf("alert") < 0);
+  assert(str.indexOf("confirm") < 0);
+  assert(str.indexOf("prompt") < 0);
 };
 
 const assert = (bool) => {
