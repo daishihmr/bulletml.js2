@@ -65,6 +65,7 @@ class Manager extends EventDispatcher {
 
   run(bullet, root) {
     const runner = Runner.get(bullet, root, this);
+    bullet.runner = runner;
     this.fire("newrunner", runner);
     return runner;
   }

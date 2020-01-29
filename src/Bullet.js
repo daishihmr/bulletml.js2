@@ -14,7 +14,7 @@ class Bullet {
   }
 
   destroy() {
-    this.runner.manager.remove(this.runner);
+    if (this.runner) this.runner.manager.remove(this.runner);
   }
 
   onVanish() { }

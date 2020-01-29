@@ -625,7 +625,7 @@
 	  }
 
 	  destroy() {
-	    this.runner.manager.remove(this.runner);
+	    if (this.runner) this.runner.manager.remove(this.runner);
 	  }
 
 	  onVanish() { }
@@ -1336,6 +1336,7 @@
 
 	  run(bullet, root) {
 	    const runner = Runner.get(bullet, root, this);
+	    bullet.runner = runner;
 	    this.fire("newrunner", runner);
 	    return runner;
 	  }
